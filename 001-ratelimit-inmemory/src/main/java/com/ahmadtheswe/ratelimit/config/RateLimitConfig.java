@@ -9,18 +9,32 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.NonNull;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-@Component
+@Configuration
 public class RateLimitConfig extends OncePerRequestFilter {
 
   private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
+  @Bean
+  public FilterRegistrationBean<RateLimitConfig> rateLimitFilter() {
+    FilterRegistrationBean<RateLimitConfig> registrationBean = new FilterRegistrationBean<>();
+    registrationBean.setFilter(this);
+    registrationBean.addUrlPatterns("/hello/limited");
+    registrationBean.setOrder(1);
+    return registrationBean;
+  }
+
   @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-      FilterChain filterChain) throws ServletException, IOException {
+  protected void doFilterInternal(
+      @NonNull HttpServletRequest request,
+      @NonNull HttpServletResponse response,
+      @NonNull FilterChain filterChain) throws ServletException, IOException {
     String ip = getIP(request);
     Bucket bucket = buckets.computeIfAbsent(ip, this::newBucket);
 
@@ -45,5 +59,4 @@ public class RateLimitConfig extends OncePerRequestFilter {
     }
     return ip;
   }
-
 }
